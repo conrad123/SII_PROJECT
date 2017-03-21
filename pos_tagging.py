@@ -1,8 +1,12 @@
-import nltk, glob, os
+import nltk, glob, os, json
 
 os.chdir('./data/subtitles-V3-by-topic/Biology/BIO110')
 
+map = {}
+
 for file in glob.glob('*.txt'):
+
+    print(file)
 
     f = open(file,'r')
     text = f.read()
@@ -20,6 +24,13 @@ for file in glob.glob('*.txt'):
         if tag[1] == 'NNS':
             contnns += 1
 
-    print(file)
-    print('Terms: '+str(len(split)))
-    print('NN: '+str(contnn)+'\tNNS: '+str(contnns)+'\n')
+    map[file] = {'Terms': len(split), 'NN': contnn, 'NNS': contnns}
+
+map = json.dumps(map)
+
+os.chdir('../../../../outputfiles')
+f = open('pos_tagging/pos_tagging_biology.txt', 'w')
+f.write(str(map))
+f.close()
+
+print('Scrittura completata')
