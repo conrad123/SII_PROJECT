@@ -1,36 +1,46 @@
 import nltk, glob, os, json
 
-os.chdir('./data/subtitles-V3-by-topic/Biology/BIO110')
+directories = ['DESIGN101','UD509']
 
-map = {}
+for dir in directories:
 
-for file in glob.glob('*.txt'):
+    path = './data/subtitles-V3-by-topic/Design/'+dir
+    os.chdir(path)
 
-    print(file)
+    map = {}
 
-    f = open(file,'r')
-    text = f.read()
+    for file in glob.glob('*.txt'):
+
+        print(file)
+
+        f = open(file,'r')
+        text = f.read()
+        f.close()
+
+        split = text.split()
+        try:
+            text = nltk.word_tokenize(text)
+            tags = nltk.pos_tag(text)
+
+            contnn = 0
+            contnns = 0
+            for tag in tags:
+                if tag[1] == 'NN':
+                    contnn += 1
+                if tag[1] == 'NNS':
+                    contnns += 1
+
+            map[file] = {'Terms': len(split), 'NN': contnn, 'NNS': contnns}
+        except:
+            map[file] = 'Decoding Error'
+
+    map = json.dumps(map)
+
+    file_path = 'pos_tagging/pos_tagging_design_'+dir+'.txt'
+    os.chdir('../../../../outputfiles')
+    f = open(file_path, 'w')
+    f.write(str(map))
     f.close()
+    os.chdir('../')
 
-    split = text.split()
-    text = nltk.word_tokenize(text)
-    tags = nltk.pos_tag(text)
-
-    contnn = 0
-    contnns = 0
-    for tag in tags:
-        if tag[1] == 'NN':
-            contnn += 1
-        if tag[1] == 'NNS':
-            contnns += 1
-
-    map[file] = {'Terms': len(split), 'NN': contnn, 'NNS': contnns}
-
-map = json.dumps(map)
-
-os.chdir('../../../../outputfiles')
-f = open('pos_tagging/pos_tagging_biology.txt', 'w')
-f.write(str(map))
-f.close()
-
-print('Scrittura completata')
+    print('Scrittura completata')

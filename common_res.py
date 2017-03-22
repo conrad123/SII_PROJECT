@@ -1,66 +1,74 @@
 import os, glob, ast, json
 
-os.chdir('./data/subtitles-V3-by-topic/Biology/BIO110')
+directories = ['DESIGN101','UD509']
 
-files = []
+for dir in directories:
 
-for file in glob.glob('*.txt'):
-    files.append(file)
+    path = './data/subtitles-V3-by-topic/Design/'+dir
+    os.chdir(path)
 
-os.chdir('../../../../outputfiles')
+    files = []
 
-f = open('dbpedia_spotlight/dbpediaspotlight_biology.txt','r')
-map = f.read()
-map = ast.literal_eval(map)
-f.close()
+    for file in glob.glob('*.txt'):
+        files.append(file)
 
-common_res = {}
+    os.chdir('../../../../outputfiles')
 
-i = 0
-while i<len(files):
+    file_path = 'dbpedia_spotlight/dbpedia_spotlight_design_'+dir+'.txt'
+    f = open(file_path,'r')
+    map = f.read()
+    map = json.loads(map)
+    f.close()
 
-    j = 0
-    print(files[i])
-    ai = map[files[i]]
-    common_res[files[i]] = {}
-    uri_i = []
+    common_res = {}
 
-    for obj in ai:
-        uri_i.append(obj['URI'])
+    i = 0
+    while i<len(files):
 
-    uri_i = list(set(uri_i))
+        j = 0
+        print(files[i])
+        ai = map[files[i]]
+        common_res[files[i]] = {}
+        uri_i = []
 
-    while j<len(files):
+        for obj in ai:
+            uri_i.append(obj['URI'])
 
-        if i == len(files)-1 and i == j:
-            break
+        uri_i = list(set(uri_i))
 
-        if files[i] == files[j]:
+        while j<len(files):
+
+            if i == len(files)-1 and i == j:
+                break
+
+            if files[i] == files[j]:
+                j = j+1
+
+            cont = 0
+            aj = map[files[j]]
+            uri_j = []
+
+            for obj in aj:
+                uri_j.append(obj['URI'])
+
+            for res_i in uri_i:
+                for res_j in uri_j:
+                    if res_i == res_j:
+                        cont = cont+1
+
+            if cont>4:
+                common_res[files[i]][files[j]] = cont
+
             j = j+1
 
-        cont = 0
-        aj = map[files[j]]
-        uri_j = []
+        i = i+1
 
-        for obj in aj:
-            uri_j.append(obj['URI'])
+    common_res = json.dumps(common_res)
 
-        for res_i in uri_i:
-            for res_j in uri_j:
-                if res_i == res_j:
-                    cont = cont+1
+    file_path = 'common_res/common_res_design_'+dir+'.txt'
+    f = open(file_path,'w')
+    f.write(str(common_res))
+    f.close()
+    os.chdir('../')
 
-        if cont>4:
-            common_res[files[i]][files[j]] = cont
-
-        j = j+1
-
-    i = i+1
-
-common_res = json.dumps(common_res)
-
-f = open('common_res/common_res_biology.txt','w')
-f.write(str(common_res))
-f.close()
-
-print('Scrittura completata')
+    print('Scrittura completata')
