@@ -1,10 +1,10 @@
-import os, glob, ast, json
+import os, glob, json
 
-directories = ['DESIGN101','UD509']
+directories = ['PS001']
 
 for dir in directories:
 
-    path = './data/subtitles-V3-by-topic/Design/'+dir
+    path = './data/subtitles-V3-by-topic/Psychology/'+dir
     os.chdir(path)
 
     files = []
@@ -14,7 +14,7 @@ for dir in directories:
 
     os.chdir('../../../../outputfiles')
 
-    file_path = 'dbpedia_spotlight/dbpedia_spotlight_design_'+dir+'.txt'
+    file_path = 'dbpedia_spotlight/dbpedia_spotlight_psychology_'+dir+'.txt'
     f = open(file_path,'r')
     map = f.read()
     map = json.loads(map)
@@ -65,7 +65,7 @@ for dir in directories:
 
     common_res = json.dumps(common_res)
 
-    file_path = 'common_res/common_res_design_'+dir+'.txt'
+    file_path = 'common_res/common_res_psychology_'+dir+'.txt'
     f = open(file_path,'w')
     f.write(str(common_res))
     f.close()

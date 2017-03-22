@@ -1,10 +1,10 @@
 import nltk, glob, os, json
 
-directories = ['DESIGN101','UD509']
+directories = ['PS001']
 
 for dir in directories:
 
-    path = './data/subtitles-V3-by-topic/Design/'+dir
+    path = './data/subtitles-V3-by-topic/Psychology/'+dir
     os.chdir(path)
 
     map = {}
@@ -36,7 +36,7 @@ for dir in directories:
 
     map = json.dumps(map)
 
-    file_path = 'pos_tagging/pos_tagging_design_'+dir+'.txt'
+    file_path = 'pos_tagging/pos_tagging_psychology_'+dir+'.txt'
     os.chdir('../../../../outputfiles')
     f = open(file_path, 'w')
     f.write(str(map))

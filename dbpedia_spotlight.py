@@ -1,10 +1,10 @@
 import spotlight, os, glob, json
 
-directories = ['DESIGN101','UD509']
+directories = ['PS001']
 
 for dir in directories:
 
-    path = './data/subtitles-V3-by-topic/Design/'+dir
+    path = './data/subtitles-V3-by-topic/Psychology/'+dir
     os.chdir(path)
 
     map = {}
@@ -27,7 +27,7 @@ for dir in directories:
         except:
             map[file] = []
 
-    file_path = 'dbpedia_spotlight/dbpedia_spotlight_design_'+dir+'.txt'
+    file_path = 'dbpedia_spotlight/dbpedia_spotlight_psychology_'+dir+'.txt'
     os.chdir('../../../../outputfiles')
     f = open(file_path,'w')
     f.write(str(json.dumps(map)))
