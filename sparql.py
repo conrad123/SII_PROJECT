@@ -13,34 +13,27 @@ titoli = []
 for file in glob.glob('*.txt'):
     titoli.append(file)
 
+map_out = {}
 for titolo in titoli:
     objs = map[titolo]
     uris = []
     for obj in objs:
         uris.append(obj['URI'])
 
-    set_uris = list(set(uris))
-
-    counts = []
-    for set_uri in set_uris:
-        counts.append((set_uri,uris.count(set_uri)))
-
-    counts = sorted(counts, key=lambda x: x[1], reverse=True)
+    uris = list(set(uris))
 
     i = 0
-    while i<len(counts):
-        counts[i] = list(counts[i])
-        counts[i][0] = '<'+counts[i][0]+'> dcterms:subject ?cat .'
-        counts[i] = tuple(counts[i])
+    while i<len(uris):
+        uris[i] = '<'+uris[i]+'> dcterms:subject ?cat .'
         i = i+1
 
     final_result = []
     i = 0
-    while i<len(counts):
+    while i<len(uris):
 
         sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
-        query = "PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {"+counts[i][0]+"}"
+        query = "PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {"+uris[i]+"}"
 
         sparql.setQuery(query)
         sparql.setReturnFormat(JSON)
@@ -57,7 +50,10 @@ for titolo in titoli:
     for elem in set_final_result:
         category_counts.append((elem, final_result.count(elem)))
 
-    max_count = max(category_counts, key=lambda x: x[1])[1]
+    try:
+        max_count = max(category_counts, key=lambda x: x[1])[1]
+    except:
+        max_count = 0
 
     file_category = []
     for cat in category_counts:
@@ -65,5 +61,11 @@ for titolo in titoli:
             file_category.append(cat[0])
 
     print(titolo)
-    print('max'+str(max_count))
-    print(file_category)
+    map_out[titolo] = (file_category,max_count)
+
+os.chdir('../../../../outputfiles')
+f = open('sparql/categories_biology.txt','w')
+f.write(json.dumps(map_out))
+f.close()
+
+print('Scrittura completata')
