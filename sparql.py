@@ -1,71 +1,78 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
 import os, glob, json
 
-f = open('./outputfiles/dbpedia_spotlight/dbpedia_spotlight_biology_BIO110.txt','r')
-map = f.read()
-f.close()
+directories = ['DESIGN101','UD509']
 
-map = json.loads(map)
+for dir in directories:
 
-os.chdir('./data/subtitles-V3-by-topic/Biology/BIO110')
-titoli = []
+    path = './outputfiles/dbpedia_spotlight/dbpedia_spotlight_design_'+dir+'.txt'
+    f = open(path,'r')
+    map = f.read()
+    f.close()
 
-for file in glob.glob('*.txt'):
-    titoli.append(file)
+    map = json.loads(map)
 
-map_out = {}
-for titolo in titoli:
-    objs = map[titolo]
-    uris = []
-    for obj in objs:
-        uris.append(obj['URI'])
+    path = './data/subtitles-V3-by-topic/Design/'+dir
+    os.chdir(path)
+    titoli = []
 
-    uris = list(set(uris))
+    for file in glob.glob('*.txt'):
+        titoli.append(file)
 
-    i = 0
-    while i<len(uris):
-        uris[i] = '<'+uris[i]+'> dcterms:subject ?cat .'
-        i = i+1
+    map_out = {}
+    for titolo in titoli:
+        objs = map[titolo]
+        uris = []
+        for obj in objs:
+            uris.append(obj['URI'])
 
-    final_result = []
-    i = 0
-    while i<len(uris):
+        uris = list(set(uris))
 
-        sparql = SPARQLWrapper("http://dbpedia.org/sparql")
+        i = 0
+        while i<len(uris):
+            uris[i] = '<'+uris[i]+'> dcterms:subject ?cat .'
+            i = i+1
 
-        query = "PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {"+uris[i]+"}"
+        final_result = []
+        i = 0
+        while i<len(uris):
 
-        sparql.setQuery(query)
-        sparql.setReturnFormat(JSON)
-        results = sparql.query().convert()
+            sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
-        for result in results["results"]["bindings"]:
-            final_result.append(result["cat"]["value"])
+            query = "PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {"+uris[i]+"}"
 
-        i = i+1
+            sparql.setQuery(query)
+            sparql.setReturnFormat(JSON)
+            results = sparql.query().convert()
 
-    set_final_result = list(set(final_result))
+            for result in results["results"]["bindings"]:
+                final_result.append(result["cat"]["value"])
 
-    category_counts = []
-    for elem in set_final_result:
-        category_counts.append((elem, final_result.count(elem)))
+            i = i+1
 
-    try:
-        max_count = max(category_counts, key=lambda x: x[1])[1]
-    except:
-        max_count = 0
+        set_final_result = list(set(final_result))
 
-    file_category = []
-    for cat in category_counts:
-        if cat[1] == max_count:
-            file_category.append(cat[0])
+        category_counts = []
+        for elem in set_final_result:
+            category_counts.append((elem, final_result.count(elem)))
 
-    print(titolo)
-    map_out[titolo] = (file_category,max_count)
+        try:
+            max_count = max(category_counts, key=lambda x: x[1])[1]
+        except:
+            max_count = 0
 
-os.chdir('../../../../outputfiles')
-f = open('sparql/categories_biology.txt','w')
-f.write(json.dumps(map_out))
-f.close()
+        file_category = []
+        for cat in category_counts:
+            if cat[1] == max_count:
+                file_category.append(cat[0])
 
-print('Scrittura completata')
+        print(titolo)
+        map_out[titolo] = (file_category,max_count)
+
+    os.chdir('../../../../outputfiles')
+    f = open('sparql/categories_design_'+dir+'.txt','w')
+    f.write(json.dumps(map_out))
+    f.close()
+    os.chdir('../')
+
+    print('Scrittura completata')
