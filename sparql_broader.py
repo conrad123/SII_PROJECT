@@ -16,11 +16,12 @@ for result in results["results"]["bindings"]:
 
 print('FINE DEI SKOS:BROADER\nINIZIO DEI IS SKOS:BROADER OF')
 
-query = 'PREFIX cat: <http://dbpedia.org/resource/Category:> SELECT * { values ?category { <cat:20th-century_American_male_actors> } ?concept skos:broader ?category . }'
+query = ' PREFIX cat: <http://dbpedia.org/resource/Category:> SELECT *  { values ?category { cat:20th-century_American_male_actors } ?concept skos:broader ?category . }'
 
 sparql.setQuery(query)
 sparql.setReturnFormat(JSON)
 results = sparql.query().convert()
 
+
 for result in results["results"]["bindings"]:
-    print(result["category"]["value"])
+    print(result["concept"]["value"])
