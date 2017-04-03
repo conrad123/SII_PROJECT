@@ -2,9 +2,9 @@ import nltk, string
 from sklearn.feature_extraction.text import TfidfVectorizer
 import os, glob, json
 
-directories = ['CS046']
+directories = ['BIO110']
 
-f = open('./outputfiles/common_cat/common_cat_computerscience_CS046.txt', 'r')
+f = open('./outputfiles/common_cat/common_cat_biology_BIO110.txt', 'r')
 common_res = f.read()
 common_res = json.loads(common_res)
 f.close()
@@ -27,7 +27,7 @@ def cosine_sim(text1: object, text2: object) -> object:
 
 for dir in directories:
 
-    path = './data/subtitles-V3-by-topic/Computer Science/'+dir
+    path = './data/subtitles-V3-by-topic/Biology/'+dir
     os.chdir(path)
 
     files = []
@@ -68,7 +68,7 @@ for dir in directories:
 
     map = json.dumps(map)
 
-    file_path = 'text_sim/text_sim_computerscience_' + dir + '.txt'
+    file_path = 'text_sim/text_sim_biology_' + dir + '.txt'
     os.chdir('../../../../outputfiles')
     f = open(file_path, 'w')
     f.write(str(map))

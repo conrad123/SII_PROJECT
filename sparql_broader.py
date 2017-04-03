@@ -1,27 +1,55 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
 import os, glob, json
 
-final_result =  []
+directories = ['BIO110']
+
+final_result =  {}
 
 sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
-query = 'PREFIX cat: <http://dbpedia.org/resource/Category:> SELECT ?broaderConcept ?preferredLabel WHERE {cat:20th-century_American_male_actors skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
+for directory in directories:
 
-sparql.setQuery(query)
-sparql.setReturnFormat(JSON)
-results = sparql.query().convert()
+    f = open('./outputfiles/sparql/categories_biology_'+directory+'.txt','r')
+    obj = f.read()
+    f.close()
 
-for result in results["results"]["bindings"]:
-    print(result["broaderConcept"]["value"])
+    obj = json.loads(obj)
 
-print('FINE DEI SKOS:BROADER\nINIZIO DEI IS SKOS:BROADER OF')
+    articles = list(obj.keys())
 
-query = ' PREFIX cat: <http://dbpedia.org/resource/Category:> SELECT *  { values ?category { cat:20th-century_American_male_actors } ?concept skos:broader ?category . }'
+    for article in articles:
 
-sparql.setQuery(query)
-sparql.setReturnFormat(JSON)
-results = sparql.query().convert()
+        print(article)
+        categories_of_article = obj[article]
+        final_result[article] = {}
+
+        for category in categories_of_article[0]:
+
+            broader_of_article = []
+            isbroaderof_of_article = []
+
+            query = 'SELECT ?broaderConcept ?preferredLabel WHERE { <'+category+'> skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
+
+            sparql.setQuery(query)
+            sparql.setReturnFormat(JSON)
+            results = sparql.query().convert()
+
+            for result in results["results"]["bindings"]:
+                broader_of_article.append(result['broaderConcept']['value'])
+
+            query = 'SELECT *  { values ?category { <'+category+'> } ?concept skos:broader ?category . }'
+
+            sparql.setQuery(query)
+            sparql.setReturnFormat(JSON)
+            results = sparql.query().convert()
 
 
-for result in results["results"]["bindings"]:
-    print(result["concept"]["value"])
+            for result in results["results"]["bindings"]:
+                isbroaderof_of_article.append(result['concept']['value'])
+
+            final_result[article][category] = (broader_of_article, isbroaderof_of_article)
+
+    f = open('./outputfiles/sparql/broaders_biology_'+directory+'.txt','w')
+    f.write(json.dumps(final_result))
+    f.close()
+    print('Scrittura completata')

@@ -1,18 +1,18 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
 import os, glob, json
 
-directories = ['DESIGN101','UD509']
+directories = ['BIO110']
 
 for dir in directories:
 
-    path = './outputfiles/dbpedia_spotlight/dbpedia_spotlight_design_'+dir+'.txt'
+    path = './outputfiles/dbpedia_spotlight/dbpedia_spotlight_biology_'+dir+'.txt'
     f = open(path,'r')
     map = f.read()
     f.close()
 
     map = json.loads(map)
 
-    path = './data/subtitles-V3-by-topic/Design/'+dir
+    path = './data/subtitles-V3-by-topic/Biology/'+dir
     os.chdir(path)
     titoli = []
 
@@ -67,10 +67,13 @@ for dir in directories:
                 file_category.append(cat[0])
 
         print(titolo)
-        map_out[titolo] = (file_category,max_count)
+        if len(file_category)<4 and len(file_category)>0:
+            map_out[titolo] = (file_category,max_count)
+        else:
+            map_out[titolo] = ([],0)
 
     os.chdir('../../../../outputfiles')
-    f = open('sparql/categories_design_'+dir+'.txt','w')
+    f = open('sparql/categories_biology_'+dir+'.txt','w')
     f.write(json.dumps(map_out))
     f.close()
     os.chdir('../')

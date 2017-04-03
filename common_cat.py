@@ -47,7 +47,7 @@ for dir in directories:
                     if c_i == c_j:
                         cont = cont+1
 
-            if cont>2:
+            if cont>0:
                 common_cat[files[i]][files[j]] = cont
 
             j = j+1
