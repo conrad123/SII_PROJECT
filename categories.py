@@ -1,7 +1,7 @@
 import nltk, string, json
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-directories = ['BIO110']
+directories = ['MA006','MA008','ST095','ST101','UD201','UD651','UD827']
 
 stem = nltk.stem.porter.PorterStemmer()
 remove_punctuation_map = dict((ord(char), None) for char in string.punctuation)
@@ -21,44 +21,52 @@ def cosine_sim(text1, text2):
 
 '''------------------------------------------------------------------------------------------------'''
 
-f = open('./outputfiles/sparql/categories_biology_BIO110.txt','r')
-obj = f.read()
-f.close()
-obj = json.loads(obj)
+for directory in directories:
 
-articles = list(obj.keys())
-one_category_articles = []
-more_category_articles = []
-
-for article in articles:
-    if len(obj[article][0]) == 1:
-        one_category_articles.append(article)
-    else:
-        more_category_articles.append(article)
-
-for more_category_article in more_category_articles:
-
-    print(more_category_article)
-    text_sims = []
-    f = open('./data/subtitles-V3-by-topic/Biology/BIO110/'+more_category_article,'r')
-    text = f.read()
+    f = open('./outputfiles/sparql/categories_sparql_mathematics_'+directory+'.txt','r')
+    obj = f.read()
     f.close()
+    obj = json.loads(obj)
 
-    for one_category_article in one_category_articles:
-        f = open('./data/subtitles-V3-by-topic/Biology/BIO110/'+one_category_article,'r')
-        text_comp = f.read()
+    articles = list(obj.keys())
+    one_category_articles = []
+    more_category_articles = []
+
+    for article in articles:
+        if len(obj[article][0]) == 1:
+            one_category_articles.append(article)
+        else:
+            more_category_articles.append(article)
+
+    for more_category_article in more_category_articles:
+
+        print(more_category_article)
+        text_sims = []
+        f = open('./data/subtitles-V3-by-topic/Mathematics, Statistics and Data Analysis/'+directory+'/'+more_category_article,'r')
+        text = f.read()
         f.close()
-        text_sims.append((one_category_article,cosine_sim(text,text_comp)))
 
-    max_sim = max(text_sims, key=lambda x: x[1])
+        for one_category_article in one_category_articles:
+            f = open('./data/subtitles-V3-by-topic/Mathematics, Statistics and Data Analysis/'+directory+'/'+one_category_article,'r')
+            text_comp = f.read()
+            f.close()
+            text_sims.append((one_category_article,cosine_sim(text,text_comp)))
 
-    for text_sim in text_sims:
-        if max_sim[1] == text_sim[1]:
-            category = obj[text_sim[0]][0][0]
-            obj[more_category_article][0] = [category]
+        max_sim = max(text_sims, key=lambda x: x[1])
 
-f = open('./outputfiles/sparql/categories_biology_BIO110.txt','w')
-f.write(json.dumps(obj))
-f.close()
+        for text_sim in text_sims:
+            if max_sim[1] == text_sim[1]:
+                if ((max_sim[1]>=0.1) and ((obj[more_category_article][1]==1) or (obj[text_sim[0]][0][0] in obj[more_category_article][0]))):
+                    category = obj[text_sim[0]][0][0]
+                    obj[more_category_article][0] = [category]
+                else:
+                    try:
+                        obj[more_category_article][0] = obj[more_category_article][0][0]
+                    except:
+                        obj[more_category_article][0] = []
+
+    f = open('./outputfiles/sparql/categories_mathematics_'+directory+'.txt','w')
+    f.write(json.dumps(obj))
+    f.close()
 
 print('Scrittura completata')
