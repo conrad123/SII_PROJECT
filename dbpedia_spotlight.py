@@ -24,13 +24,14 @@ for dir in directories:
                 annotations[i] = {'sourfaceForm': annotations[i]['surfaceForm'], 'URI': annotations[i]['URI']}
                 i = i+1
             map[file] = annotations
+
         except:
             map[file] = []
 
     file_path = 'dbpedia_spotlight/dbpedia_spotlight_psychology_'+dir+'.txt'
     os.chdir('../../../../outputfiles')
     f = open(file_path,'w')
-    f.write(str(json.dumps(map)))
+    f.write(json.dumps(map))
     f.close()
     os.chdir('../')
 

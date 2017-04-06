@@ -1,7 +1,8 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
-import os, glob, json
+import json
 
 directories = ['BIO110']
+sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
 for dir in directories:
 
@@ -12,17 +13,15 @@ for dir in directories:
 
     map = json.loads(map)
 
-    path = './data/subtitles-V3-by-topic/Biology/'+dir
-    os.chdir(path)
-    titoli = []
-
-    for file in glob.glob('*.txt'):
-        titoli.append(file)
+    titoli = list(map.keys())
 
     map_out = {}
+
     for titolo in titoli:
+
         objs = map[titolo]
         uris = []
+
         for obj in objs:
             uris.append(obj['URI'])
 
@@ -35,9 +34,8 @@ for dir in directories:
 
         final_result = []
         i = 0
-        while i<len(uris):
 
-            sparql = SPARQLWrapper("http://dbpedia.org/sparql")
+        while i<len(uris):
 
             query = "PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {"+uris[i]+"}"
 
@@ -67,15 +65,10 @@ for dir in directories:
                 file_category.append(cat[0])
 
         print(titolo)
-        if len(file_category)<4 and len(file_category)>0:
-            map_out[titolo] = (file_category,max_count)
-        else:
-            map_out[titolo] = ([],0)
+        map_out[titolo] = (file_category,max_count)
 
-    os.chdir('../../../../outputfiles')
-    f = open('sparql/categories_biology_'+dir+'.txt','w')
+    f = open('./outputfiles/sparql/categories_biology_'+dir+'.txt','w')
     f.write(json.dumps(map_out))
     f.close()
-    os.chdir('../')
 
     print('Scrittura completata')

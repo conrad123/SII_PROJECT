@@ -26,6 +26,7 @@ for dir in directories:
             nns = []
             contnn = 0
             contnns = 0
+
             for tag in tags:
                 if tag[1] == 'NN':
                     contnn += 1
@@ -35,6 +36,7 @@ for dir in directories:
                     nns.append(tag[0])
 
             map[file] = {'Terms': len(split), 'NN': (contnn,nn), 'NNS': (contnns,nns)}
+
         except:
             map[file] = 'Decoding Error'
 
@@ -43,7 +45,7 @@ for dir in directories:
     file_path = 'pos_tagging/pos_tagging_biology_'+dir+'.txt'
     os.chdir('../../../../outputfiles')
     f = open(file_path, 'w')
-    f.write(str(map))
+    f.write(map)
     f.close()
     os.chdir('../')
 

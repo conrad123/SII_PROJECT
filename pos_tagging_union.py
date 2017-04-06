@@ -1,4 +1,4 @@
-import nltk, glob, os, json
+import glob, os, json
 
 directories = ['PS001']
 
@@ -14,22 +14,19 @@ for dir in directories:
     f.close()
     map_com_cat = json.loads(map_com_cat)
 
-    path = './data/subtitles-V3-by-topic/Psychology/'+dir
-    os.chdir(path)
-
     map_out = {}
-    files = []
-    for file in glob.glob('*.txt'):
-        files.append(file)
+    files = list(map_pos.keys())
 
     for file in files:
+
         print(file)
         commons = {}
+
         try:
             nn_comp = list(set(map_pos[file]['NN'][1]))
             nns_comp = list(set(map_pos[file]['NNS'][1]))
 
-            common_files = map_com_cat[file].keys()
+            common_files = list(map_com_cat[file].keys())
             for com in common_files:
 
                 try:
@@ -43,6 +40,7 @@ for dir in directories:
 
                 except:
                     continue
+
                 map_out[file] = commons
 
         except:
@@ -50,11 +48,9 @@ for dir in directories:
 
     map_out = json.dumps(map_out)
 
-    file_path = 'pos_tagging/pos_tagging_union_psychology_'+dir+'.txt'
-    os.chdir('../../../../outputfiles')
+    file_path = './outputfiles/pos_tagging/pos_tagging_union_psychology_'+dir+'.txt'
     f = open(file_path, 'w')
-    f.write(str(map_out))
+    f.write(map_out)
     f.close()
-    os.chdir('../')
 
     print('Scrittura completata')

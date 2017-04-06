@@ -1,11 +1,10 @@
 from SPARQLWrapper import SPARQLWrapper, JSON
-import os, glob, json
+import json
 
 directories = ['BIO110']
+sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
 final_result =  {}
-
-sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
 for directory in directories:
 
@@ -52,4 +51,5 @@ for directory in directories:
     f = open('./outputfiles/sparql/broaders_biology_'+directory+'.txt','w')
     f.write(json.dumps(final_result))
     f.close()
+
     print('Scrittura completata')

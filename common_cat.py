@@ -1,28 +1,21 @@
-import os, glob, json
+import json
 
 directories = ['BIO110']
 
 for dir in directories:
 
-    path = './data/subtitles-V3-by-topic/Biology/'+dir
-    os.chdir(path)
-
-    files = []
-
-    for file in glob.glob('*.txt'):
-        files.append(file)
-
-    os.chdir('../../../../outputfiles')
-
-    file_path = 'sparql/categories_biology_'+dir+'.txt'
+    file_path = './outputfiles/sparql/categories_biology_'+dir+'.txt'
     f = open(file_path,'r')
     map = f.read()
     map = json.loads(map)
     f.close()
 
+    files = list(map.keys())
+
     common_cat = {}
 
     i = 0
+
     while i<len(files):
 
         j = 0
@@ -33,22 +26,18 @@ for dir in directories:
 
         while j<len(files):
 
-            if i == len(files)-1 and i == j:
-                break
+            if files[i] != files[j]:
 
-            if files[i] == files[j]:
-                j = j+1
+                cont = 0
+                aj = map[files[j]]
 
-            cont = 0
-            aj = map[files[j]]
+                for c_i in ai[0]:
+                    for c_j in aj[0]:
+                        if c_i == c_j:
+                            cont = cont+1
 
-            for c_i in ai[0]:
-                for c_j in aj[0]:
-                    if c_i == c_j:
-                        cont = cont+1
-
-            if cont>0:
-                common_cat[files[i]][files[j]] = cont
+                if cont>0:
+                    common_cat[files[i]][files[j]] = cont
 
             j = j+1
 
@@ -56,10 +45,9 @@ for dir in directories:
 
     common_cat = json.dumps(common_cat)
 
-    file_path = 'common_cat/common_cat_biology_'+dir+'.txt'
+    file_path = './outputfiles/common_cat/common_cat_biology_'+dir+'.txt'
     f = open(file_path,'w')
-    f.write(str(common_cat))
+    f.write(common_cat)
     f.close()
-    os.chdir('../')
 
     print('Scrittura completata')

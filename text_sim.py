@@ -21,7 +21,7 @@ def normalize(text):
 
 vectorizer = TfidfVectorizer(tokenizer=normalize, stop_words='english')
 
-def cosine_sim(text1: object, text2: object) -> object:
+def cosine_sim(text1, text2):
     tfidf = vectorizer.fit_transform([text1, text2])
     return ((tfidf * tfidf.T).A)[0,1]
 
@@ -46,7 +46,6 @@ for dir in directories:
         j=0
         file2similarity = {}
 
-
         while j<len(common_files):
 
             file_i = open(files[i], 'r')
@@ -59,10 +58,9 @@ for dir in directories:
 
             file2similarity[common_files[j]] = cos_sim
 
-
             j = j+1
 
-        map[files[i]] =file2similarity
+        map[files[i]] = file2similarity
 
         i=i+1
 
@@ -71,10 +69,8 @@ for dir in directories:
     file_path = 'text_sim/text_sim_biology_' + dir + '.txt'
     os.chdir('../../../../outputfiles')
     f = open(file_path, 'w')
-    f.write(str(map))
+    f.write(map)
     f.close()
     os.chdir('../')
 
     print('Scrittura completata')
-
-
