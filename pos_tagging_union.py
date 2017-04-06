@@ -1,15 +1,15 @@
-import glob, os, json
+import json
 
-directories = ['PS001']
+directories = ['BIO110']
 
-for dir in directories:
+for directory in directories:
 
-    f = open('./outputfiles/pos_tagging/pos_tagging_psychology_'+dir+'.txt','r')
+    f = open('./outputfiles/pos_tagging/pos_tagging_biology_' + directory + '.txt', 'r')
     map_pos = f.read()
     f.close()
     map_pos = json.loads(map_pos)
 
-    f = open('./outputfiles/common_cat/common_cat_psychology_'+dir+'.txt','r')
+    f = open('./outputfiles/common_cat/common_cat_biology_' + directory + '.txt', 'r')
     map_com_cat = f.read()
     f.close()
     map_com_cat = json.loads(map_com_cat)
@@ -48,7 +48,7 @@ for dir in directories:
 
     map_out = json.dumps(map_out)
 
-    file_path = './outputfiles/pos_tagging/pos_tagging_union_psychology_'+dir+'.txt'
+    file_path = './outputfiles/pos_tagging/pos_tagging_union/pos_tagging_union_biology_' + directory + '.txt'
     f = open(file_path, 'w')
     f.write(map_out)
     f.close()

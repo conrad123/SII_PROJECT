@@ -1,10 +1,10 @@
 import json
 
-directories = ['BIO110']
+directories = ['PS001']
 
 for dir in directories:
 
-    file_path = './outputfiles/sparql/categories_biology_'+dir+'.txt'
+    file_path = './outputfiles/sparql/categories_psychology_'+dir+'.txt'
     f = open(file_path,'r')
     map = f.read()
     map = json.loads(map)
@@ -45,7 +45,7 @@ for dir in directories:
 
     common_cat = json.dumps(common_cat)
 
-    file_path = './outputfiles/common_cat/common_cat_biology_'+dir+'.txt'
+    file_path = './outputfiles/common_cat/common_cat_psychology_'+dir+'.txt'
     f = open(file_path,'w')
     f.write(common_cat)
     f.close()

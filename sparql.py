@@ -67,7 +67,7 @@ for dir in directories:
         print(titolo)
         map_out[titolo] = (file_category,max_count)
 
-    f = open('./outputfiles/sparql/categories_biology_'+dir+'.txt','w')
+    f = open('./outputfiles/sparql/categories_sparql_biology_'+dir+'.txt','w')
     f.write(json.dumps(map_out))
     f.close()
 

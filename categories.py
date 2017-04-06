@@ -1,7 +1,7 @@
 import nltk, string, json
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-directories = ['MA006','MA008','ST095','ST101','UD201','UD651','UD827']
+directories = ['PS001']
 
 stem = nltk.stem.porter.PorterStemmer()
 remove_punctuation_map = dict((ord(char), None) for char in string.punctuation)
@@ -23,7 +23,7 @@ def cosine_sim(text1, text2):
 
 for directory in directories:
 
-    f = open('./outputfiles/sparql/categories_sparql_mathematics_'+directory+'.txt','r')
+    f = open('./outputfiles/sparql/categories_sparql_psychology_'+directory+'.txt','r')
     obj = f.read()
     f.close()
     obj = json.loads(obj)
@@ -42,12 +42,12 @@ for directory in directories:
 
         print(more_category_article)
         text_sims = []
-        f = open('./data/subtitles-V3-by-topic/Mathematics, Statistics and Data Analysis/'+directory+'/'+more_category_article,'r')
+        f = open('./data/subtitles-V3-by-topic/Psychology/'+directory+'/'+more_category_article,'r')
         text = f.read()
         f.close()
 
         for one_category_article in one_category_articles:
-            f = open('./data/subtitles-V3-by-topic/Mathematics, Statistics and Data Analysis/'+directory+'/'+one_category_article,'r')
+            f = open('./data/subtitles-V3-by-topic/Psychology/'+directory+'/'+one_category_article,'r')
             text_comp = f.read()
             f.close()
             text_sims.append((one_category_article,cosine_sim(text,text_comp)))
@@ -61,11 +61,11 @@ for directory in directories:
                     obj[more_category_article][0] = [category]
                 else:
                     try:
-                        obj[more_category_article][0] = obj[more_category_article][0][0]
+                        obj[more_category_article][0] = [obj[more_category_article][0][0]]
                     except:
                         obj[more_category_article][0] = []
 
-    f = open('./outputfiles/sparql/categories_mathematics_'+directory+'.txt','w')
+    f = open('./outputfiles/sparql/categories_psychology_'+directory+'.txt','w')
     f.write(json.dumps(obj))
     f.close()
 

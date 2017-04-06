@@ -2,9 +2,9 @@ import json
 
 directories = ['BIO110']
 
-for dir in directories:
+for directory in directories:
 
-    f = open('./outputfiles/pos_tagging/pos_tagging_biology_'+dir+'.txt','r')
+    f = open('./outputfiles/pos_tagging/pos_tagging_biology_' + directory + '.txt', 'r')
     map = f.read()
     f.close()
 
@@ -54,7 +54,7 @@ for dir in directories:
 
     map_out = json.dumps(map_out)
 
-    file_path = './outputfiles/pos_tagging/pos_tagging_intersection/pos_tagging_intersection_biology_'+dir+'.txt'
+    file_path = './outputfiles/pos_tagging/pos_tagging_intersection/pos_tagging_intersection_biology_' + directory + '.txt'
     f = open(file_path, 'w')
     f.write(map_out)
     f.close()
