@@ -1,7 +1,7 @@
 from collections import defaultdict
 from SPARQLWrapper import SPARQLWrapper, JSON
 from sklearn.feature_extraction.text import TfidfVectorizer
-import spotlight, nltk, string
+import spotlight, nltk, string, glob, os
 
 sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
@@ -37,6 +37,7 @@ def prerequisite(text1, text2):
         dict = [x for x in dict if x[1]>=treshold]
 
         abstracts = []
+        #cat = set(categories(text1))
 
         for r in dict:
             query = """prefix ontology: <http://dbpedia.org/ontology/>
@@ -61,65 +62,66 @@ def prerequisite(text1, text2):
 
         if prereq_candidates != []:
             prereq = max(prereq_candidates, key=lambda x: x[1])
+            #print (prereq)
             sem_fields = set(semantic_fields(prereq[0]))
-            cat = set(categories(text1))
-            print(sem_fields)
-            print(len(sem_fields))
-            print ("-----")
-            print (cat)
-            print(len(cat))
+            cat = categories(text1)
+            #print(len(cat))
+            print (list(sem_fields.intersection(cat)))
             if len(list(sem_fields.intersection(cat))) > 0:
                 print(prereq)
+                print("relazione di prerequisito")
     except:
         print("No resources")
-
-
-
-
-
-
-
 
 
 def categories(text):
 
     annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', text, confidence=0.5, support=20)
 
+    dict = defaultdict(int)
+
     for annotation in annotations:
-        query = 'PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {<' + annotation['URI'] + '> dcterms:subject ?cat .}'
+        dict[annotation['URI']] += 1
 
-        sparql.setQuery(query)
-        sparql.setReturnFormat(JSON)
-        results = sparql.query().convert()
+    dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
 
-        categories = []
-        for result in results["results"]["bindings"]:
-            categories.append(result["cat"]["value"])
+    max = dict[0][1]
+    dict = [x for x in dict if x[1] == max]
 
-        dict = defaultdict(int)
+    sem_fields = []
 
-        for category in categories:
-            dict[category] += 1
+    for d in dict:
+        sem_fields = sem_fields + semantic_fields(d[0])
 
-        dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
+    return set(sem_fields)
+    #for c in cat:
+        #sem_fields = sem_fields + semantic_fields(c)
 
-        max = dict[0][1]
-        dict = [x for x in dict if x[1]==max]
+    #return set(sem_fields)
+        #query = 'PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {<' + annotation['URI'] + '> dcterms:subject ?cat .}'
 
-        categories = []
-        for d in dict:
-            categories.append(d[0])
+        #sparql.setQuery(query)
+        #sparql.setReturnFormat(JSON)
+        #results = sparql.query().convert()
+        #categories = []
+        #for result in results["results"]["bindings"]:
+            #categories.append(result["cat"]["value"])
 
-        return categories
+        #dict = defaultdict(int)
 
+        #for category in categories:
+            #dict[category] += 1
 
+        #dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
 
+        #max = dict[0][1]
+        #dict = [x for x in dict if x[1]==max]
 
+        #categories = []
+        #for d in dict:
+            #categories.append(d[0])
 
-
-
-
-
+        #return categories
 
 def semantic_fields(resource):
 
@@ -188,12 +190,26 @@ def semantic_fields(resource):
     fields = fields + broader_of_category + isbroaderof_of_category
     return fields
 
+path = './data/subtitles-V3-by-topic/Biology/BIO110/'
+os.chdir(path)
 
-
-
-
-
-
-b = "To declare an array of strings with space for ten values, we would make the variable, and give it a type of string array, and an initial value of a new string array with space for ten items. To declare an array of strings that contains two values, yes and no, we'll use the curly brace notation. The type is the same as before, but now we put the strings, yes and no, in the curly braces separated by commas. "
-a = "Now you've done a lot of work with numbers and most people think that numbers are what computers are really good at. But truth be told many programmers work more with text than numbers. In Java the technical term for text is a string. Why a string? You can think of text being a sequence of individual letters that are strung together. You have already seen strings. In Java, their enclosed in quotes and there's some text inside. You've seen string variables, here is one, it's called name and it's type is string. You've seen a bunch of string methods and here are a few more. In the interest of learn by doing, go ahead, fire up BlueJ. And tell me what happens when you call each of these methods, or in the last case, when you execute this piece of code. "
-prerequisite(a, b)
+for file_1 in glob.glob('*.txt'):
+    f = open(file_1, 'r')
+    a = f.read()
+    f.close()
+    for file_2 in glob.glob('*.txt'):
+        if file_1!=file_2:
+            print(file_1)
+            print(file_2)
+            f = open(file_2, 'r')
+            b = f.read()
+            f.close()
+            prerequisite(a, b)
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
+            print('-----')
