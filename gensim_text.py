@@ -1,13 +1,11 @@
-import logging, os, ast, glob
+import logging, os, glob, spotlight
 from collections import defaultdict
+from SPARQLWrapper import SPARQLWrapper, JSON
 from gensim import corpora, models, similarities
 
 #logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
-#f = open('./test/TEST_BIOLOGY_0,28.txt')
-#files = f.read()
-#f.close()
-#files = ast.literal_eval(files)
+sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
 path = './data/subtitles-V3-by-topic/Biology/BIO110/'
 os.chdir(path)
@@ -33,14 +31,11 @@ for text in texts:
     for token in text:
         frequency[token] += 1
 
-texts = [[token for token in text if frequency[token] > 1]for text in texts]
+texts = [[token for token in text if frequency[token] > 1] for text in texts]
 
 dictionary = corpora.Dictionary(texts)
 
 dictionary.save('./outputfiles/dictionary/redirect.dict')
-
-#new_doc = "protocols"
-#new_vec = dictionary.doc2bow(new_doc.lower().split())
 
 corpus = [dictionary.doc2bow(text) for text in texts]
 corpora.MmCorpus.serialize('./outputfiles/dictionary/redirect.mm', corpus)
@@ -56,37 +51,82 @@ lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=300)
 corpus_lsi = lsi[corpus_tfidf]
 
 lsi.save('./outputfiles/dictionary/redirect.lsi')
-lsi = models.LsiModel.load('./outputfiles/dictionary/redirect.lsi')
+
+if os.path.exists("./outpufiles/dictionary/redirect.lsi"):
+    lsi = models.LsiModel.load('./outputfiles/dictionary/redirect.lsi')
 
 lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=300)
 
+f = open('./data/subtitles-V3-by-topic/Biology/BIO110/bio110 Mitosis.txt', 'r')
+text = f.read()
+f.close()
 
-doc = "DNA"
-vec_bow = dictionary.doc2bow(doc.lower().split())
+annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', text, confidence=0.5, support=20)
+
+dict = defaultdict(int)
+
+#--------------------------------------------------------------------------------------------------------------------
+#CONFRONTARE LE RISORSE DEL TESTO IN ANALISI CON IL CORPUS
+'''
+for annotation in annotations:
+    dict[annotation['URI'][28:].replace('_',' ')] += 1
+'''
+
+#--------------------------------------------------------------------------------------------------------------------
+#CONFRONTARE LE RISORSE DEGLI ABSTRACT DEL TESTO IN ANALISI CON IL CORPUS
+for annotation in annotations:
+    dict[annotation['URI']] += 1
+
+dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
+
+treshold = int((dict[0][1] + dict[len(dict)-1][1])/2)
+
+dict = [x for x in dict if x[1] >= treshold]
+
+abstracts = []
+
+for r in dict:
+    query = """
+               prefix ontology: <http://dbpedia.org/ontology/>
+               select ?abstract where {
+                  <""" + r[0] + """> ontology:abstract ?abstract .
+                  filter(langMatches(lang(?abstract),"en"))
+               }
+            """
+
+    sparql.setQuery(query)
+    sparql.setReturnFormat(JSON)
+    results = sparql.query().convert()
+
+    for result in results["results"]["bindings"]:
+        abstracts.append((r[0], result["abstract"]["value"]))
+
+dict = defaultdict(int)
+
+for a in abstracts:
+    annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', a[1], confidence=0.5, support=20)
+    for annotation in annotations:
+        dict[annotation['URI'][28:].replace('_', ' ')] += 1
+
+#--------------------------------------------------------------------------------------------------------------------
+
+query = ''
+
+for d in dict:
+    query += d[0]+' '
+
+vec_bow = dictionary.doc2bow(query.lower().split())
 vec_lsi = lsi[vec_bow]
 
 index = similarities.MatrixSimilarity(lsi[corpus])
 index.save('./outputfiles/dictionary/redirect.index')
-index = similarities.MatrixSimilarity.load('./outputfiles/dictionary/redirect.index')
+
+if os.path.exists("./outputfiles/dictionary/redirect.index"):
+    index = similarities.MatrixSimilarity.load('./outputfiles/dictionary/redirect.index')
+
 sims = index[vec_lsi]
 
 sims = sorted(enumerate(sims), key=lambda item: -item[1])
 
-print(files_name[3])
-print(sims)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+for s in sims:
+    print files_name[s[0]]+' --> '+str(s[1])
