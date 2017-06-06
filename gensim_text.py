@@ -1,11 +1,20 @@
-import logging, os, glob, spotlight
+import logging, os, glob, spotlight, wikipedia, json
 from collections import defaultdict
 from SPARQLWrapper import SPARQLWrapper, JSON
 from gensim import corpora, models, similarities
 
 #logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
+
+
+
 sparql = SPARQLWrapper("http://dbpedia.org/sparql")
+
+f = open('./outputfiles/sparql/sparql_broaders/broaders_2steps_biology_BIO110.txt')
+broaders = f.read()
+f.close()
+
+broaders = json.loads(broaders)
 
 path = './data/subtitles-V3-by-topic/Biology/BIO110/'
 os.chdir(path)
@@ -20,6 +29,15 @@ for file in glob.glob('*.txt'):
     documents.append(text)
 
 os.chdir('../../../../')
+
+
+
+
+
+
+
+
+
 
 stoplist = set("a	about	above	after	again	against	all	am	an	and	any	are	aren't	as	at	be	because	been	before	being	below	between	both	but	by	can't	cannot	could	couldn't	did	didn't	do	does	doesn't	doing	don't	down	during	each	few	for	from	further	had	hadn't	has	hasn't	have	haven't	having	he	he'd	he'll	he's	her	here	here's	hers	herself	him	himself	his	how	how's	i	i'd	i'll	i'm	i've	if	in	into	is	isn't	it	it's	its	itself	let's	me	more	most	mustn't	my	myself	no	nor	not	of	off	on	once	only	or	other	ought	our	ours	ourselves	out	over	own	same	shan't	she	she'd	she'll	she's	should	shouldn't	so	some	such	than	that	that's	the	their	theirs	them	themselves	then	there	there's	these	they	they'd	they'll	they're	they've	this	those	through	to	too	under	until	up	very	was	wasn't	we	we'd	we'll	we're	we've	were	weren't	what	what's	when	when's	where	where's	which	while	who	who's	whom	why	why's	with	won't	would	wouldn't	you	you'd	you'll	you're	you've	your	yours	yourself	yourselves".split('\t'))
 
@@ -57,7 +75,12 @@ if os.path.exists("./outpufiles/dictionary/redirect.lsi"):
 
 lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=300)
 
-f = open('./data/subtitles-V3-by-topic/Biology/BIO110/bio110 Mitosis.txt', 'r')
+
+
+
+
+
+f = open('./data/subtitles-V3-by-topic/Computer Science/CS046/cs046 0104 Java.txt', 'r')
 text = f.read()
 f.close()
 
@@ -65,15 +88,6 @@ annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate
 
 dict = defaultdict(int)
 
-#--------------------------------------------------------------------------------------------------------------------
-#CONFRONTARE LE RISORSE DEL TESTO IN ANALISI CON IL CORPUS
-'''
-for annotation in annotations:
-    dict[annotation['URI'][28:].replace('_',' ')] += 1
-'''
-
-#--------------------------------------------------------------------------------------------------------------------
-#CONFRONTARE LE RISORSE DEGLI ABSTRACT DEL TESTO IN ANALISI CON IL CORPUS
 for annotation in annotations:
     dict[annotation['URI']] += 1
 
@@ -83,50 +97,164 @@ treshold = int((dict[0][1] + dict[len(dict)-1][1])/2)
 
 dict = [x for x in dict if x[1] >= treshold]
 
-abstracts = []
+print '--- Risorse ---'
+print dict
+
+
+
+all_categories = []
 
 for r in dict:
-    query = """
-               prefix ontology: <http://dbpedia.org/ontology/>
-               select ?abstract where {
-                  <""" + r[0] + """> ontology:abstract ?abstract .
-                  filter(langMatches(lang(?abstract),"en"))
-               }
-            """
+
+    # *********** CATEGORIE ************
+    query = 'PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {<' + r[0] + '> dcterms:subject ?cat .}'
 
     sparql.setQuery(query)
     sparql.setReturnFormat(JSON)
     results = sparql.query().convert()
 
+    categories = []
     for result in results["results"]["bindings"]:
-        abstracts.append((r[0], result["abstract"]["value"]))
+        categories.append(result["cat"]["value"])
 
-dict = defaultdict(int)
+    print 'Categorie fatte'
+
+    broader_of_categories = []
+    isbroaderof_of_categories = []
+
+    for category in categories:
+        # *********** BROADER ************
+        query = 'SELECT ?broaderConcept ?preferredLabel WHERE { <' + category + '> skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
+
+        sparql.setQuery(query)
+        sparql.setReturnFormat(JSON)
+        results = sparql.query().convert()
+
+        # --- 1 STEP ---
+        for result in results["results"]["bindings"]:
+            broader_of_categories.append(result['broaderConcept']['value'])
+
+        print '1step'
+
+        # --- 2 STEPS ---
+        for result in results["results"]["bindings"]:
+            query = 'SELECT ?broaderConcept ?preferredLabel WHERE { <' + result["broaderConcept"][
+                "value"] + '> skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
+            sparql.setQuery(query)
+            sparql.setReturnFormat(JSON)
+            results_2_steps = sparql.query().convert()
+            for result_2_steps in results_2_steps["results"]["bindings"]:
+                broader_of_categories.append(result_2_steps["broaderConcept"]["value"])
+
+        print 'Broader fatti'
+
+        # print '************* IS BROADER OF **************'
+        query = 'SELECT * { values ?category { <' + category + '> } ?concept skos:broader ?category . }'
+
+        sparql.setQuery(query)
+        sparql.setReturnFormat(JSON)
+        results = sparql.query().convert()
+
+        # --- 1 STEP ---
+        for result in results["results"]["bindings"]:
+            isbroaderof_of_categories.append(result['concept']['value'])
+
+        # --- 2 STEPS ---
+        for result in results["results"]["bindings"]:
+            query = 'SELECT * { values ?category { <' + result["concept"][
+                "value"] + '> } ?concept skos:broader ?category . }'
+            sparql.setQuery(query)
+            sparql.setReturnFormat(JSON)
+            results_2_steps = sparql.query().convert()
+            for result_2_steps in results_2_steps["results"]["bindings"]:
+                isbroaderof_of_categories.append(result_2_steps["concept"]["value"])
+
+        print 'is broader of fatti'
+
+    all_categories += categories + broader_of_categories + isbroaderof_of_categories
+
+all_categories = set(all_categories)
+
+
+
+
+
+abstracts = []
+
+for r in dict:
+
+    try:
+        page = wikipedia.page(r[0][28:])
+    except:
+        page = None
+
+    abstracts.append((r[0], page.summary))
+
+'''dict = defaultdict(int)'''
+
+print '--- Abstarct ---'
+print abstracts
+
+
+
+
+
+
+semantic_avgs = {}
 
 for a in abstracts:
+
+    dict = defaultdict(int)
+    query = ''
     annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', a[1], confidence=0.5, support=20)
+
     for annotation in annotations:
         dict[annotation['URI'][28:].replace('_', ' ')] += 1
 
-#--------------------------------------------------------------------------------------------------------------------
+    dict = sorted(dict.items(), key=lambda x: -x[1])
 
-query = ''
+    treshold = int((dict[0][1]+dict[len(dict)-1][1])/2)
 
-for d in dict:
-    query += d[0]+' '
+    dict = [x for x in dict if x[1] >= treshold]
 
-vec_bow = dictionary.doc2bow(query.lower().split())
-vec_lsi = lsi[vec_bow]
+    for r in dict:
+        query += r[0]+' '
 
-index = similarities.MatrixSimilarity(lsi[corpus])
-index.save('./outputfiles/dictionary/redirect.index')
+    terms = query.lower().split()
 
-if os.path.exists("./outputfiles/dictionary/redirect.index"):
-    index = similarities.MatrixSimilarity.load('./outputfiles/dictionary/redirect.index')
+    print terms
 
-sims = index[vec_lsi]
+    vec_bow = dictionary.doc2bow(terms)
+    vec_lsi = lsi[vec_bow]
 
-sims = sorted(enumerate(sims), key=lambda item: -item[1])
+    index = similarities.MatrixSimilarity(lsi[corpus])
+    index.save('./outputfiles/dictionary/redirect.index')
 
-for s in sims:
-    print files_name[s[0]]+' --> '+str(s[1])
+    if os.path.exists("./outputfiles/dictionary/redirect.index"):
+        index = similarities.MatrixSimilarity.load('./outputfiles/dictionary/redirect.index')
+
+    sims = index[vec_lsi]
+
+    sims = sorted(enumerate(sims), key=lambda item: -item[1])
+
+    for s in sims:
+        if files_name[s[0]] in semantic_avgs:
+            semantic_avgs[files_name[s[0]]].append(s[1])
+        else:
+            semantic_avgs[files_name[s[0]]] = [s[1]]
+
+for article in semantic_avgs:
+
+    semantic_avgs[article] = sum(semantic_avgs[article])/len(semantic_avgs[article])
+
+semantic_avgs = sorted(semantic_avgs.items(), key=lambda x: -x[1])
+
+
+
+for x in semantic_avgs:
+
+    cat = broaders[x[0]]
+
+    for k in cat:
+        if (len(all_categories.intersection(set(k)))>0) or (len(all_categories.intersection(set(cat[k][0]+cat[k][1])))>0):
+            print x
