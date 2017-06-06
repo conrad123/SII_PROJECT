@@ -1,22 +1,39 @@
-import logging, os, glob, spotlight, wikipedia, json
+import os, sys, glob, spotlight, wikipedia, json, nltk, string
+from sklearn.feature_extraction.text import TfidfVectorizer
 from collections import defaultdict
 from SPARQLWrapper import SPARQLWrapper, JSON
 from gensim import corpora, models, similarities
 
-#logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
+# COSENO SIMILARITA' ------------------------------------------------------------------------------------------------
+stem = nltk.stem.porter.PorterStemmer()
+remove_punctuation_map = dict((ord(char), None) for char in string.punctuation)
 
+def stem_tokens(tokens):
+    return [stem.stem(item) for item in tokens]
 
+# si applica lo stemming, il lowercase e la rimozione della punteggiatura
+def normalize(text):
+    return stem_tokens(nltk.word_tokenize(text.lower().translate(remove_punctuation_map)))
 
+vectorizer = TfidfVectorizer(tokenizer=normalize, stop_words='english')
+
+# coseno similarita' tra due testi
+def cosine_sim(text1, text2):
+    tfidf = vectorizer.fit_transform([text1, text2])
+    return ((tfidf * tfidf.T).A)[0,1]
+
+# wrapper per sparql
 sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
-f = open('./outputfiles/sparql/sparql_broaders/broaders_2steps_biology_BIO110.txt')
+f = open(sys.argv[1])
 broaders = f.read()
 f.close()
-
 broaders = json.loads(broaders)
 
-path = './data/subtitles-V3-by-topic/Biology/BIO110/'
+
+# collezionamento di tutti i testi del corpus
+path = sys.argv[2]
 os.chdir(path)
 documents = []
 files_name = []
@@ -31,15 +48,8 @@ for file in glob.glob('*.txt'):
 os.chdir('../../../../')
 
 
-
-
-
-
-
-
-
-
-stoplist = set("a	about	above	after	again	against	all	am	an	and	any	are	aren't	as	at	be	because	been	before	being	below	between	both	but	by	can't	cannot	could	couldn't	did	didn't	do	does	doesn't	doing	don't	down	during	each	few	for	from	further	had	hadn't	has	hasn't	have	haven't	having	he	he'd	he'll	he's	her	here	here's	hers	herself	him	himself	his	how	how's	i	i'd	i'll	i'm	i've	if	in	into	is	isn't	it	it's	its	itself	let's	me	more	most	mustn't	my	myself	no	nor	not	of	off	on	once	only	or	other	ought	our	ours	ourselves	out	over	own	same	shan't	she	she'd	she'll	she's	should	shouldn't	so	some	such	than	that	that's	the	their	theirs	them	themselves	then	there	there's	these	they	they'd	they'll	they're	they've	this	those	through	to	too	under	until	up	very	was	wasn't	we	we'd	we'll	we're	we've	were	weren't	what	what's	when	when's	where	where's	which	while	who	who's	whom	why	why's	with	won't	would	wouldn't	you	you'd	you'll	you're	you've	your	yours	yourself	yourselves".split('\t'))
+# addestramento di gensim
+stoplist = set("for a of the and to in".split())
 
 texts = [[word for word in document.lower().split() if word not in stoplist]for document in documents]
 
@@ -76,14 +86,12 @@ if os.path.exists("./outpufiles/dictionary/redirect.lsi"):
 lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=300)
 
 
-
-
-
-
-f = open('./data/subtitles-V3-by-topic/Computer Science/CS046/cs046 0104 Java.txt', 'r')
+# analisi del testo da verificare
+f = open(sys.argv[3], 'r')
 text = f.read()
 f.close()
 
+# reperimento risorse da dbpedia
 annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', text, confidence=0.5, support=20)
 
 dict = defaultdict(int)
@@ -95,18 +103,16 @@ dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
 
 treshold = int((dict[0][1] + dict[len(dict)-1][1])/2)
 
+# selezione delle risorse più occorrenti
 dict = [x for x in dict if x[1] >= treshold]
 
-print '--- Risorse ---'
-print dict
 
-
-
+# reperimento delle categorie a 2 step del testo da verificare
 all_categories = []
 
 for r in dict:
 
-    # *********** CATEGORIE ************
+    # *********** CATEGORIES ************
     query = 'PREFIX dcterms:<http://purl.org/dc/terms/> SELECT ?cat WHERE {<' + r[0] + '> dcterms:subject ?cat .}'
 
     sparql.setQuery(query)
@@ -117,12 +123,12 @@ for r in dict:
     for result in results["results"]["bindings"]:
         categories.append(result["cat"]["value"])
 
-    print 'Categorie fatte'
 
     broader_of_categories = []
     isbroaderof_of_categories = []
 
     for category in categories:
+
         # *********** BROADER ************
         query = 'SELECT ?broaderConcept ?preferredLabel WHERE { <' + category + '> skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
 
@@ -134,19 +140,15 @@ for r in dict:
         for result in results["results"]["bindings"]:
             broader_of_categories.append(result['broaderConcept']['value'])
 
-        print '1step'
-
         # --- 2 STEPS ---
         for result in results["results"]["bindings"]:
-            query = 'SELECT ?broaderConcept ?preferredLabel WHERE { <' + result["broaderConcept"][
-                "value"] + '> skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
+            query = 'SELECT ?broaderConcept ?preferredLabel WHERE { <' + result["broaderConcept"]["value"] + '> skos:broader ?broaderConcept . ?broaderConcept skos:prefLabel ?preferredLabel .}'
             sparql.setQuery(query)
             sparql.setReturnFormat(JSON)
             results_2_steps = sparql.query().convert()
             for result_2_steps in results_2_steps["results"]["bindings"]:
                 broader_of_categories.append(result_2_steps["broaderConcept"]["value"])
 
-        print 'Broader fatti'
 
         # print '************* IS BROADER OF **************'
         query = 'SELECT * { values ?category { <' + category + '> } ?concept skos:broader ?category . }'
@@ -161,24 +163,19 @@ for r in dict:
 
         # --- 2 STEPS ---
         for result in results["results"]["bindings"]:
-            query = 'SELECT * { values ?category { <' + result["concept"][
-                "value"] + '> } ?concept skos:broader ?category . }'
+            query = 'SELECT * { values ?category { <' + result["concept"]["value"] + '> } ?concept skos:broader ?category . }'
             sparql.setQuery(query)
             sparql.setReturnFormat(JSON)
             results_2_steps = sparql.query().convert()
             for result_2_steps in results_2_steps["results"]["bindings"]:
                 isbroaderof_of_categories.append(result_2_steps["concept"]["value"])
 
-        print 'is broader of fatti'
-
     all_categories += categories + broader_of_categories + isbroaderof_of_categories
 
 all_categories = set(all_categories)
 
 
-
-
-
+# reperimento degli abstract di wikipedia delle risorse principali del testo da verificare
 abstracts = []
 
 for r in dict:
@@ -190,39 +187,14 @@ for r in dict:
 
     abstracts.append((r[0], page.summary))
 
-'''dict = defaultdict(int)'''
 
-print '--- Abstarct ---'
-print abstracts
-
-
-
-
-
-
+# similiratia' semantica tra gli abstract e i testi del corpus
 semantic_avgs = {}
 
 for a in abstracts:
 
-    dict = defaultdict(int)
-    query = ''
-    annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', a[1], confidence=0.5, support=20)
-
-    for annotation in annotations:
-        dict[annotation['URI'][28:].replace('_', ' ')] += 1
-
-    dict = sorted(dict.items(), key=lambda x: -x[1])
-
-    treshold = int((dict[0][1]+dict[len(dict)-1][1])/2)
-
-    dict = [x for x in dict if x[1] >= treshold]
-
-    for r in dict:
-        query += r[0]+' '
-
-    terms = query.lower().split()
-
-    print terms
+    query = a[1]
+    terms = list(set(query.lower().split()))
 
     vec_bow = dictionary.doc2bow(terms)
     vec_lsi = lsi[vec_bow]
@@ -243,6 +215,7 @@ for a in abstracts:
         else:
             semantic_avgs[files_name[s[0]]] = [s[1]]
 
+# similarita' semantica media per ogni testo del corpus
 for article in semantic_avgs:
 
     semantic_avgs[article] = sum(semantic_avgs[article])/len(semantic_avgs[article])
@@ -250,11 +223,37 @@ for article in semantic_avgs:
 semantic_avgs = sorted(semantic_avgs.items(), key=lambda x: -x[1])
 
 
-
+# generamento dell'output
+final_result = []
 for x in semantic_avgs:
 
     cat = broaders[x[0]]
 
     for k in cat:
+
+        # verifica di intersezione tra le categorie a 2 step del testo da verificare e del corpus
         if (len(all_categories.intersection(set(k)))>0) or (len(all_categories.intersection(set(cat[k][0]+cat[k][1])))>0):
-            print x
+
+            f = open(sys.argv[2]+x[0], 'r')
+            text = f.read()
+            f.close()
+
+            # similarita' sintattica tra gli abstract e i testi del corpus
+            cos_sims = []
+            for a in abstracts:
+                cos_sims.append(cosine_sim(text, a[1]))
+
+            max_cos_sim = max(cos_sims)
+            min_cos_sim = min(cos_sims)
+
+            # eliminazione dei falsi positivi di gensim
+            if max_cos_sim >= 0.1:
+                final_result.append((x[0], x[1]+max_cos_sim-min_cos_sim))
+            else:
+                final_result.append((x[0], 0))
+
+final_result.sort(key=lambda x: -x[1])
+
+for x in final_result:
+    if x[1] != 0:
+        print x
