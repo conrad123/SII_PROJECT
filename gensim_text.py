@@ -63,6 +63,17 @@ stoplist = set("for a of the and to in".split())
 
 texts = [[word for word in document.lower().split() if word not in stoplist] for document in documents]
 
+corpus_size = len(files_name)
+
+if corpus_size>=0 and corpus_size<=100:
+    topics = 50
+elif corpus_size>=101 and corpus_size<=200:
+    topics = 150
+elif corpus_size>=201 and corpus_size<=500:
+    topics = 300
+elif corpus_size>=501:
+    topics = 400
+
 frequency = defaultdict(int)
 
 for text in texts:
@@ -85,7 +96,7 @@ if (os.path.exists(sys.argv[3]+"tmp.dict") and os.path.exists(sys.argv[3]+"tmp.m
 tfidf = models.TfidfModel(corpus)
 corpus_tfidf = tfidf[corpus]
 
-lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=300)
+lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=topics)
 corpus_lsi = lsi[corpus_tfidf]
 
 lsi.save(sys.argv[3]+'tmp.lsi')
@@ -93,7 +104,7 @@ lsi.save(sys.argv[3]+'tmp.lsi')
 if os.path.exists(sys.argv[3]+"tmp.lsi"):
     lsi = models.LsiModel.load(sys.argv[3]+'tmp.lsi')
 
-lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=300)
+lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=topics)
 
 # -------------------------------------------------------------------------------------------------------------------
 
@@ -107,7 +118,10 @@ f.close()
 print('Reperimento risorse da dbpedia...')
 
 # reperimento risorse da dbpedia
-annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', text, confidence=0.5, support=20)
+try:
+    annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', text, confidence=0.5, support=20)
+except:
+    annotations = []
 
 dict = defaultdict(int)
 
@@ -116,10 +130,11 @@ for annotation in annotations:
 
 dict = sorted(dict.items(), key=lambda x: -x[1])
 
-treshold = int((dict[0][1] + dict[len(dict)-1][1])/2)
+if dict != []:
+    treshold = int((dict[0][1] + dict[len(dict)-1][1])/2)
 
-# selezione delle risorse piu' occorrenti
-dict = [x for x in dict if x[1] >= treshold]
+    # selezione delle risorse piu' occorrenti
+    dict = [x for x in dict if x[1] >= treshold]
 
 
 print 'Reperimento delle categorie... (potrebbe richiedere tempo)'
@@ -202,7 +217,8 @@ for r in dict:
     except:
         page = None
 
-    abstracts.append((r[0], page.summary))
+    if page != None:
+        abstracts.append((r[0], page.summary))
 
 # -------------------------------------------------------------------------------------------------------------------
 
