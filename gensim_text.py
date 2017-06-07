@@ -1,11 +1,12 @@
-import os, sys, glob, spotlight, wikipedia, json, nltk, string
-from sklearn.feature_extraction.text import TfidfVectorizer
+import os, sys, glob, string, json, spotlight, wikipedia, nltk
 from collections import defaultdict
+from sklearn.feature_extraction.text import TfidfVectorizer
 from SPARQLWrapper import SPARQLWrapper, JSON
 from gensim import corpora, models, similarities
 
 
 # COSENO SIMILARITA' ------------------------------------------------------------------------------------------------
+
 stem = nltk.stem.porter.PorterStemmer()
 remove_punctuation_map = dict((ord(char), None) for char in string.punctuation)
 
@@ -23,10 +24,16 @@ def cosine_sim(text1, text2):
     tfidf = vectorizer.fit_transform([text1, text2])
     return ((tfidf * tfidf.T).A)[0,1]
 
+# -------------------------------------------------------------------------------------------------------------------
+
+# COLLEZIONAMENTO TESTI ---------------------------------------------------------------------------------------------
+
+print ('Collezionamento testi del corpus...')
+
 # wrapper per sparql
 sparql = SPARQLWrapper("http://dbpedia.org/sparql")
 
-f = open(sys.argv[1])
+f = open(sys.argv[4])
 broaders = f.read()
 f.close()
 broaders = json.loads(broaders)
@@ -47,11 +54,14 @@ for file in glob.glob('*.txt'):
 
 os.chdir('../../../../')
 
+# -------------------------------------------------------------------------------------------------------------------
+
+# GENSIM ------------------------------------------------------------------------------------------------------------
 
 # addestramento di gensim
 stoplist = set("for a of the and to in".split())
 
-texts = [[word for word in document.lower().split() if word not in stoplist]for document in documents]
+texts = [[word for word in document.lower().split() if word not in stoplist] for document in documents]
 
 frequency = defaultdict(int)
 
@@ -63,14 +73,14 @@ texts = [[token for token in text if frequency[token] > 1] for text in texts]
 
 dictionary = corpora.Dictionary(texts)
 
-dictionary.save('./outputfiles/dictionary/redirect.dict')
+dictionary.save(sys.argv[3]+'tmp.dict')
 
 corpus = [dictionary.doc2bow(text) for text in texts]
-corpora.MmCorpus.serialize('./outputfiles/dictionary/redirect.mm', corpus)
+corpora.MmCorpus.serialize(sys.argv[3]+'tmp.mm', corpus)
 
-if (os.path.exists("./outputfiles/dictionary/redirect.dict") and os.path.exists("./outputfiles/dictionary/redirect.mm")):
-    dictionary = corpora.Dictionary.load("./outputfiles/dictionary/redirect.dict")
-    corpus = corpora.MmCorpus("./outputfiles/dictionary/redirect.mm")
+if (os.path.exists(sys.argv[3]+"tmp.dict") and os.path.exists(sys.argv[3]+"tmp.mm")):
+    dictionary = corpora.Dictionary.load(sys.argv[3]+"tmp.dict")
+    corpus = corpora.MmCorpus(sys.argv[3]+"tmp.mm")
 
 tfidf = models.TfidfModel(corpus)
 corpus_tfidf = tfidf[corpus]
@@ -78,18 +88,23 @@ corpus_tfidf = tfidf[corpus]
 lsi = models.LsiModel(corpus_tfidf, id2word=dictionary, num_topics=300)
 corpus_lsi = lsi[corpus_tfidf]
 
-lsi.save('./outputfiles/dictionary/redirect.lsi')
+lsi.save(sys.argv[3]+'tmp.lsi')
 
-if os.path.exists("./outpufiles/dictionary/redirect.lsi"):
-    lsi = models.LsiModel.load('./outputfiles/dictionary/redirect.lsi')
+if os.path.exists(sys.argv[3]+"tmp.lsi"):
+    lsi = models.LsiModel.load(sys.argv[3]+'tmp.lsi')
 
 lsi = models.LsiModel(corpus, id2word=dictionary, num_topics=300)
 
+# -------------------------------------------------------------------------------------------------------------------
+
+# TESTO IN INPUT ----------------------------------------------------------------------------------------------------
 
 # analisi del testo da verificare
-f = open(sys.argv[3], 'r')
+f = open(sys.argv[1], 'r')
 text = f.read()
 f.close()
+
+print('Reperimento risorse da dbpedia...')
 
 # reperimento risorse da dbpedia
 annotations = spotlight.annotate('http://model.dbpedia-spotlight.org/en/annotate/', text, confidence=0.5, support=20)
@@ -99,13 +114,15 @@ dict = defaultdict(int)
 for annotation in annotations:
     dict[annotation['URI']] += 1
 
-dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
+dict = sorted(dict.items(), key=lambda x: -x[1])
 
 treshold = int((dict[0][1] + dict[len(dict)-1][1])/2)
 
-# selezione delle risorse più occorrenti
+# selezione delle risorse piu' occorrenti
 dict = [x for x in dict if x[1] >= treshold]
 
+
+print 'Reperimento delle categorie... (potrebbe richiedere tempo)'
 
 # reperimento delle categorie a 2 step del testo da verificare
 all_categories = []
@@ -187,6 +204,11 @@ for r in dict:
 
     abstracts.append((r[0], page.summary))
 
+# -------------------------------------------------------------------------------------------------------------------
+
+print 'Verifica prerequisiti...'
+
+# VERIFICA PREREQUISITI ---------------------------------------------------------------------------------------------
 
 # similiratia' semantica tra gli abstract e i testi del corpus
 semantic_avgs = {}
@@ -200,10 +222,10 @@ for a in abstracts:
     vec_lsi = lsi[vec_bow]
 
     index = similarities.MatrixSimilarity(lsi[corpus])
-    index.save('./outputfiles/dictionary/redirect.index')
+    index.save(sys.argv[3]+'tmp.index')
 
-    if os.path.exists("./outputfiles/dictionary/redirect.index"):
-        index = similarities.MatrixSimilarity.load('./outputfiles/dictionary/redirect.index')
+    if os.path.exists(sys.argv[3]+"tmp.index"):
+        index = similarities.MatrixSimilarity.load(sys.argv[3]+'tmp.index')
 
     sims = index[vec_lsi]
 
@@ -249,11 +271,18 @@ for x in semantic_avgs:
             # eliminazione dei falsi positivi di gensim
             if max_cos_sim >= 0.1:
                 final_result.append((x[0], x[1]+max_cos_sim-min_cos_sim))
-            else:
-                final_result.append((x[0], 0))
 
-final_result.sort(key=lambda x: -x[1])
+if final_result != []:
+    final_result.sort(key=lambda x: -x[1])
 
-for x in final_result:
-    if x[1] != 0:
-        print x
+# -------------------------------------------------------------------------------------------------------------------
+
+print '-----------------------------------------------------------'
+
+if final_result == []:
+    print 'Nessun prerequisito trovato.'
+else:
+    print 'Elenco prerequisiti:'
+
+for elem in final_result:
+    print elem
